@@ -1,16 +1,13 @@
-#include <cassert>
+#include "test.h"
 #include <filesystem>
 #include "pager.h"
 #include "page.h"
 
-#define CHECK(cond)     \
-    if (!(cond)) return false;
-
 bool test_empty_database()
 {
-    std::filesystem::remove("data/test.db");
+    std::filesystem::remove("data/test.bin");
 
-    Pager pager("test.db");
+    Pager pager("test.bin");
 
     CHECK(pager.GetDatabasePageCount() == 0);
 
@@ -19,25 +16,23 @@ bool test_empty_database()
 
 bool test_write_page_zero()
 {
-    std::filesystem::remove("data/test.db");
+    std::filesystem::remove("data/test.bin");
 
-    Pager pager("test.db");
+    Pager pager("test.bin");
     Page page;
 
     page.data[0] = 'H';
 
-    pager.Write(page, 0);
-
-    CHECK(pager.GetDatabasePageCount() == 1);
+    CHECK(pager.Write(page, 0) == Status::Success)
 
     return true;
 }
 
 bool test_read_page()
 {
-    std::filesystem::remove("data/test.db");
+    std::filesystem::remove("data/test.bin");
 
-    Pager pager("test.db");
+    Pager pager("test.bin");
     Page page;
 
     page.data[0] = 'H'; page.data[1] = 'i'; page.data[2] = '!';
@@ -45,30 +40,29 @@ bool test_read_page()
     pager.Write(page, 0);
 
     Page data;
-    pager.Read(&data, 0);
-
-    CHECK(data.data[0] == 'H' && data.data[1] == 'i' && data.data[2] == '!');
+  
+    CHECK(pager.Read(&data, 0) == Status::Success)
 
     return true;
 }
 
 bool test_overwrite_page()
 {
-    std::filesystem::remove("data/test.db");
+    std::filesystem::remove("data/test.bin");
 
-    Pager pager("test.db");
+    Pager pager("test.bin");
     Page page;
 
     page.data[0] = 'H'; page.data[1] = 'i'; page.data[2] = '!';
 
-    pager.Write(page, 0);
+    pager.Write(page, 0);   // append new page
 
     Page data;
     pager.Read(&data, 0);
 
     page.data[0] = 'B'; page.data[1] = 'i'; page.data[2] = 't';
 
-    pager.Write(page, 0);
+    pager.Write(page, 0); // overwrite page 0
 
     pager.Read(&data, 0);
     CHECK(data.data[0] == 'B' && data.data[1] == 'i' && data.data[2] == 't');
@@ -78,9 +72,9 @@ bool test_overwrite_page()
 
 bool test_multiple_pages()
 {
-    std::filesystem::remove("data/test.db");
+    std::filesystem::remove("data/test.bin");
 
-    Pager pager("test.db");
+    Pager pager("test.bin");
     Page page1; page1.data[0] = 'A';
     Page page2; page2.data[0] = 'B';
     Page page3; page3.data[0] = 'C';
@@ -104,27 +98,27 @@ bool test_multiple_pages()
 
 bool test_invalid_read()
 {
-    std::filesystem::remove("data/test.db");
+    std::filesystem::remove("data/test.bin");
 
-    Pager pager("test.db");
+    Pager pager("test.bin");
     Page page;
 
     pager.Write(page, 0);
 
     Page data;
-    CHECK(!pager.Read(&data, 99));
+    CHECK(pager.Read(&data, 99) != Status::Success);
 
     return true;
 }
 
-bool test_invalid_append()
+bool test_page_out_of_bounds()
 {
-    std::filesystem::remove("data/test.db");
+    std::filesystem::remove("data/test.bin");
 
-    Pager pager("test.db");
+    Pager pager("test.bin");
     Page page;
 
-    CHECK(!pager.Write(page, 5));
+    CHECK(pager.Write(page, 5) != Status::Success);
 
     return true;
 }

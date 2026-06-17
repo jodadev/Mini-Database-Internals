@@ -5,7 +5,7 @@ constexpr uint32_t PAGE_SIZE = 4096;
 
 struct Page
 {
-    char data[PAGE_SIZE]; 
+    uint8_t data[PAGE_SIZE]; 
     Page()
     {
         // Clear garbage
