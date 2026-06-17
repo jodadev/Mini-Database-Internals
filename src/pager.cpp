@@ -30,40 +30,42 @@ void Pager::initialize(const char* filename)
     
 }
 
-bool Pager::Write(const Page& page, uint32_t pageid)
+Status Pager::Write(const Page& page, uint32_t pageid)
 {
-    if (!m_FileStream.is_open()) return false;
+    if (!m_FileStream.is_open()) return Status::FileNotOpen;
 
     uint32_t pageCount = GetDatabasePageCount();
 
-    if (pageid > pageCount)  return false;
+    if (pageid > pageCount)  return Status::OutOfBounds;
 
-    if (pageid == pageCount)
+    if (pageid == pageCount)  // append a new page
     {
         m_FileStream.seekp(0, m_FileStream.end);
-        m_FileStream.write(page.data, PAGE_SIZE);
+        m_FileStream.write(reinterpret_cast<const char*>(page.data), PAGE_SIZE);
     }
-    else 
+    else                                    // overwrite a page 
     {
         m_FileStream.seekp(PAGE_SIZE * pageid, m_FileStream.beg);
-        m_FileStream.write(page.data, PAGE_SIZE);
+        m_FileStream.write(reinterpret_cast<const char*>(page.data), PAGE_SIZE);
     }
 
     m_FileStream.seekp(0, m_FileStream.beg);
 
-    return m_FileStream.good();
+    return m_FileStream.good() ? Status::Success : Status::IOError;
 
 }
 
-bool Pager::Read(Page* page, uint32_t pageid)
+Status Pager::Read(Page* page, uint32_t pageid)
 {
-    if (!m_FileStream.is_open() || pageid >= GetDatabasePageCount() || !page) return false;
+    if (!page) return Status::InvalidArgument;
+    if (!m_FileStream.is_open()) return Status::FileNotOpen;
+    if (pageid >= GetDatabasePageCount()) return Status::OutOfBounds;
     
     m_FileStream.seekg(PAGE_SIZE * pageid, m_FileStream.beg);
-    m_FileStream.read(page->data, PAGE_SIZE);
+    m_FileStream.read(reinterpret_cast<char*>(page->data), PAGE_SIZE);
     m_FileStream.seekg(0, m_FileStream.beg);
 
-    return m_FileStream.good();
+    return m_FileStream.good() ? Status::Success : Status::IOError;
    
 }
 
